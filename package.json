@@ -1,0 +1,16 @@
+{
+  "name": "professional_backend_project",
+  "version": "1.0.0",
+  "description": "a backend to demonstrate professional level coding",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "backend",
+    "manuj"
+  ],
+  "author": "manuj",
+  "license": "ISC"
+}
