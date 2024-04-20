@@ -22,19 +22,28 @@ That's why we try to give access of all variables from first executed file(main 
 so that, if its loaded, we try to load our environment variables there.
     */
 
+app.on("error", (error) => {
+    console.log('Not Able to connect the app. \n Error: ', error);
+    throw {error}
+})
+
 connectDB()
+    .then(() => {
+        app.listen( // to start listening to the app while using the database
+            process.env.PORT /* to listen from the defined port*/ || 8000 /* if defined port 
+        not available then use (default) port: 8000 instead.
+Best Practice - This helps with, not to let the app crash on production server*/
+        , () => {
+            console.log(`Server is running at: ${process.env.PORT}`);
+        })
+    })
+
+    .catch((error) => { // if database throws error before connecting to the application
+        console.log("MONGO db connection failed !!!", error);
+    })
 
 
-
-
-
-
-
-
-
-
-
-
+//----------------------------------------------------------------------------//
 
 
 // 1st Approach to connect to the database
