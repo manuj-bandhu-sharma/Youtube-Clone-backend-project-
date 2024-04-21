@@ -4,7 +4,7 @@ class APIError extends Error { // to standardadized the API errors, if any occur
         statusCode,
         message = "Something went wrong",
         errors = [],
-        statck = ""
+        stack = ""
     // Note:-
     // If you do not define a constructor method, JavaScript will add an empty constructor method.
     ){ // function overwrite with the help of extend keyword
@@ -15,13 +15,13 @@ class APIError extends Error { // to standardadized the API errors, if any occur
         this.success = false // this is false as we handling errors not response
         this.errors = errors // errors will be same as it stored in defined array
 
-        if (statck) {// if we have statck or not
+        if (stack) {// if we have stack or not
     /*
-It is important, to have statch trace 
+It is important, to have stach trace 
 to understand what problem we have in which file
 Example:- For API Errors in our current scenario.  
     */
-            this.statck = statck // provide statck if available
+            this.stack = stack // provide statck if available
         }else{ // otherwise, writting a small function
             Error.captureStackTrace(this,this.constructor) // a small function toget the desired response
      // this -> reference
