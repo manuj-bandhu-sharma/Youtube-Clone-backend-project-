@@ -11,3 +11,5 @@ class APIResponse{ // whenever we send a response to a client it will go through
         //its not mendatory but required
     }
 }
+
+export {APIResponse}
