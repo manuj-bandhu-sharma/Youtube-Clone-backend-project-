@@ -2,6 +2,8 @@
 import dotenv from "dotenv"
 import connectDB from "./db/index.js";
 
+import {app} from './app.js'
+
 /*
 1st Way - as defined on dotenv website
 required('dotenv').config({path:'./env'}) // proper syntex
@@ -10,9 +12,7 @@ as it uses the basic mode of javascript.
 */
 
 // 2nd Way - to keep our code consistant
-dotenv.config({
-    path:'./env'
-})
+dotenv.config({path:'./env'})
     /*
 this takes care that as soon as the app is loaded,all the environment variables 
 should become avaiable everywhere.

@@ -1,7 +1,7 @@
 //const asyncHandler = () => {}
 
-const asyncHandler = (requestHandler) => {
-    (req, res, next) => {
+const asyncHandler = (requestHandler) => {// Its a higher order function which accepts a function
+    return (req, res, next) => { // CallBack as Return function
         Promise.resolve(// if request is resolved/success -(then)-> what?
             requestHandler(req, res, next)
         ).catch(// If request is failed -(then)-> what?
@@ -9,6 +9,10 @@ const asyncHandler = (requestHandler) => {
         )
     }
 }
+/*NOTE:
+Here, higher order function means that we except a function and also return a function
+that's what we perform in promise, return on the behalf of what you accept.
+*/
 export {asyncHandler}
 
 
