@@ -14,11 +14,23 @@ const registerUser = asyncHandler(async (req, res) => {
     while destructuring, we can define fields which we want from user
     like, username, fullName, email, username, password [in our case]
     */
+   console.log("Details that a request body holds: \n" , req.body);
+   /*
+   Details that a request body holds: (req.body) <-- Details we get from the frontend
+    [Object: null prototype] {
+        fullName: 'Manuj Bandhu Sharma',
+        email: 'manujbandhusharma@gmail.com',
+        password: 'Manuj@7737',
+        username: 'Manuj.24'
+    }
+   */
+   console.log("-----------------------------------------------------------");
     console.log("Full Name: ", fullName);
     console.log("Email: ", email);
     console.log("User Name: ", username);
     console.log("Password: ", password);
-
+    console.log("-----------------------------------------------------------");
+    
     // 2) Validation
     if (
         [fullName, email, username, password].some((field) => field?.trim() === "")
@@ -32,7 +44,7 @@ const registerUser = asyncHandler(async (req, res) => {
         )
     }
     // 3) check if user already exists
-    const existedUser = user.findOne({
+    const existedUser = await user.findOne({
         // Here, findOne returns whatever value it finds first, from the database for the defined fields
         // and in last, we holding the reference into a variable (const existedUser) 
         $or: [{ username }, { email }] // it is the query
@@ -42,14 +54,60 @@ const registerUser = asyncHandler(async (req, res) => {
             - It will return the fisrt value/document found in the db, matching to the user input
         */
     })
-    console.log("Existed User: ", existedUser);
-    if (existedUser) { // existedUser is true
+    console.log("Checking if User Existed? : ", existedUser);
+    console.log("-----------------------------------------------------------");
+
+    // Checking if user exists or not
+    if (existedUser) { // if existedUser is true
         throw new APIError(409, "User with email or username already exists")
     }
 
     // 4) Getting the file path and checking for image's existance
+
+/*
+    console.log("Checking Response object : \n", req);
+    console.log("-----------------------------------------------------------");
+    console.log("Response object's details of uploaded images :\n", req.files);
+    console.log("-----------------------------------------------------------");
+    console.log("Checking if Path field exists in Response object? : ", req.files?.path);
+    console.log("-----------------------------------------------------------");
+
+*/
     const avatarLocalPath = req.files?.avatar[0]?.path
-    console.log("Avatar file's local path : ", avatarLocalPath);
+
+    
+    /*
+        Response object's details of uploaded images : (req.files) 
+    [Object: null prototype] {
+        avatar: [
+            {
+                fieldname: 'avatar',
+                originalname: 'claudio-schwarz-k39RGHmLoV8-unsplash.jpg',
+                encoding: '7bit',
+                mimetype: 'image/jpeg',
+                destination: './public/temp',
+                filename: 'claudio-schwarz-k39RGHmLoV8-unsplash.jpg',
+                path: 'public\\temp\\claudio-schwarz-k39RGHmLoV8-unsplash.jpg',
+                size: 9145407
+            }
+        ],
+            coverImage: [
+                {
+                    fieldname: 'coverImage',
+                    originalname: 'ashish-kumar-UrNslyuxH6k-unsplash.jpg',
+                    encoding: '7bit',
+                    mimetype: 'image/jpeg',
+                    destination: './public/temp',
+                    filename: 'ashish-kumar-UrNslyuxH6k-unsplash.jpg',
+                    path: 'public\\temp\\ashish-kumar-UrNslyuxH6k-unsplash.jpg',
+                    size: 73202
+                }
+            ]
+    }
+     */
+
+    //console.log("Avatar file's local path : ", avatarLocalPath);
+
     /* Here,
     as we get all the data in (req.body), but because we added a middleware in routes(multer),
     gives us additional functionality. i.e., multer gives an additional property (req.files) --> this is how we access the files
@@ -62,8 +120,25 @@ const registerUser = asyncHandler(async (req, res) => {
     cause till now this file is on our server, not yet gone to the cloudinary yet!!.
     */
 
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
-    console.log("Cover Image Local Path: ", coverImageLocalPath);
+    //const coverImageLocalPath = req.files?.coverImage[0]?.path
+    //console.log("Cover Image Local Path: ", coverImageLocalPath);
+    // console.log("Cover Image Existance : ", req.files?.coverImage);
+    // console.log("-----------------------------------------------------------");
+
+    // console.log("required file : ", req.files);
+    // console.log("-----------------------------------------------------------");
+
+    // console.log("Cover Image array : ", Array.isArray(req.files.coverImage));
+    // console.log("-----------------------------------------------------------");
+    
+    // console.log("Cover Image array's length : ", req.files.coverImage.length);
+    // console.log("-----------------------------------------------------------");
+
+
+    let coverImageLocalPath; // initializing a variable which we going to use locally and it can be changed
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path
+    }
 
     // 4.2) As Avatar is a mendatory field, we going to check its existance
     if (!avatarLocalPath) {

@@ -1,5 +1,5 @@
-import {v2 as cloudinary} from cloudinary;
-import fs from fs; // fs stands for file structure, it comes with its various methods 
+import {v2 as cloudinary} from "cloudinary";
+import fs from "fs"; // fs stands for file structure, it comes with its various methods 
 // it comes preinstalled with Node js
 
 cloudinary.config({ 
@@ -18,10 +18,11 @@ const uploadOnCloudinary = async (localFilePath) => {
                 resource_type: "auto"
             })
         // if successfully uploaded we print the statement with its url
-        console.log("file is uploaded on cloudinary", response.url);
+       // console.log("file is uploaded on cloudinary", response.url);
+        fs.unlinkSync(localFilePath) // remove the locally saved temporary file, if file uploaded successfully to cloudinary
         return response // at last we return the response to the user
     } catch (error) {
-        fs.unlinkSync(localFilePath) // remove the locally saved temporary file as the upload opwration got failed 
+        fs.unlinkSync(localFilePath) // remove the locally saved temporary file as the upload opration got failed 
         return "File upload fail to cloudinary";
     }
 }
