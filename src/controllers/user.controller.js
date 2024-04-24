@@ -1,8 +1,72 @@
-import { asyncHandler } from "../utils(utilities)/asyncHandler.js";
+import { asyncHandler } from "../utils(utilities)/asyncHandler.js"; // for handling web requests
 import { APIError } from "../utils(utilities)/APIError.js"; // used for validation
 import { user } from "../models/user.model.js"; // used to add, delete and check if user exists or not
 import { uploadOnCloudinary } from "../utils(utilities)/couldinary.js"; // used to upload files on clodinary server
 import { APIResponse } from "../utils(utilities)/APIResponse.js"; // used to return structured and crafted response
+import { response } from "express";
+
+// ----------------------------------------------------------------------------------------------/
+                    // METHODS -> FUNCTIONS that can called MULTIPLE TIMES //
+// ----------------------------------------------------------------------------------------------/
+    const generateAccessAndRefreshTokens = async(userId) => {
+        try {
+            const User = await user.findById(userId) //If we found the user's properties
+            const accessToken = User.generateAccessToken() // This is a methods thats why we add "()" after funtion name
+            const refreshToken = User.generateRefreshToken() // This is a methods as well
+
+            User.refreshToken = refreshToken // storing the generated token in database for the perticular found user
+            
+            // Once generated token is updated for the user in db, then we save it in the mongo databse
+            await User.save( 
+            /* 
+                Remember,
+                    as we try to save, required fields in Mongoose model will kick-in (by default).
+                    like, password is a required field, and in initially we don't have the password.
+                    but, because we updating only a single field here (refresh token).
+                    That's why we pass a parameter "validationBeforeSave" => false. 
+                    Which means, don't put any validation, just go straight and save it.
+            */
+                {validationBeforeSave : false}
+            )
+
+            /*
+            Now, as we generated access key and refresh token and saved refresh token in database.
+            we return both the values.
+
+            Why we saved only refresh token and not access token in database?
+            because access tokens are valid for shorter period of time, and only used while user is trying to access our server initially.
+            but, refresh token is required as its valid for long period of time, and if we have it store. 
+            we dont have to ask user to re-login as we can validate user with the refresh token in his cokies matching it with token present in the database for the user
+            if refresh token (local cookies) === refresh token (in database) the user will be able to use the webapp without re-login
+            if the refresh token is expired or didn't matched, user will be asked for re-login
+
+            */
+            return {accessToken, refreshToken}
+
+            User.accessToken = accessToken // storing the generated token in database for the perticular found user
+
+        } catch (error) {
+            throw new APIError(500, "Something went wrong while generating access and refresh tokens!")        
+        }
+    }
+
+
+// ----------------------------------------------------------------------------------------------/
+                           // REGISTER USER //
+// ----------------------------------------------------------------------------------------------/
+
+/* 
+The Algorithm we follow to register a user
+    1) get user details from frontend
+    2) validation - if any required field is empty or not
+    3) check if user already exists: check through username or email
+    4) check for images: check for avatar(required field)
+    5) upload them to cloudinary- check avatar exist for the user or not
+    6) create user object - create entry in DB
+    7) remove password and refresh token field from response
+    8) check for user creation 
+    9) return response: null(failed) , response(successful) 
+*/
 
 const registerUser = asyncHandler(async (req, res) => {
     // 1) get user details from frontend
@@ -34,9 +98,11 @@ const registerUser = asyncHandler(async (req, res) => {
     // 2) Validation
     if (
         [fullName, email, username, password].some((field) => field?.trim() === "")
-        // Checking if any of the value/field exist or not by using (?). 
-        // if it exists and even after trimming(.trim()) it's still empty ("") 
-        // then send true otherwise false as response of IF condition
+        /*
+        Checking if any of the value/field exist or not by using (?). 
+        if it exists and even after trimming(.trim()) it's still empty ("") 
+        then send true otherwise false as response of IF condition
+        */
     ) {// if the above condition is true, execute the below code.
         throw new APIError(
             400, // status code
@@ -230,20 +296,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
 
-/* The Algorithm we follow to register a user
-    1) get user details from frontend
-    2) validation - if any required field is empty or not
-    3) check if user already exists: check through username or email
-    4) check for images: check for avatar(required field)
-    5) upload them to cloudinary- check avatar exist for the user or not
-    6) create user object - create entry in DB
-    7) remove password and refresh token field from response
-    8) check for user creation 
-    9) return response: null(failed) , response(successful)
-
-// (User-[send_data_to]->our_local_server-[send_image_to]->cloudinary-[send_image_back_to]->our_local_server)
-*/
-
 /* Testing purpose while initializing 
 const registerUser = asyncHandler(async (req, res) => {
     // Here async method is being used as parameter -in place of-> requestHandler
@@ -251,6 +303,98 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 */
 
-export{registerUser} // exporting as an object
+
+// ----------------------------------------------------------------------------------------------/
+                           // LOG IN USER //
+// ----------------------------------------------------------------------------------------------/
+    
+/* 
+The Algorithm we follow to login a user :
+    1) get data from request body
+    2) give uername or email based access
+    3) find the user
+    4) (if user exists) check the password
+    5) (if password is varified) Generate access and refresh token
+    6) send these token in cookies (secure cookies)
+    7) response of login success
+*/
+
+    const loginUser = asyncHandler(async( req , res ) => {
+
+// 1) get data from request body
+        const {username, email, password} = req.body
+
+// 2) give uername or email based access
+        // checking - Atleast username or email exists:
+        if (!username || !email) {
+            throw new APIError(400, "Atleast one (username or email) is required")
+        }
+
+// 3) find the user:
+        // a) if we get [any one or both] of the required - Check in database
+        const User = await user.findOne({ // Find User
+            $or : [{username} , {email}]
+        })
+
+        // b) if user doesn't exist / didn't find in database
+        if (!User) {
+            throw new APIError(404, "User does not exist!")
+        }
+
+// 4) if user exists ---> check the password
+        // a) if user exists in database - ckeck password
+        const isPasswordValid = await User.isPasswordCorrect(password) // Returns true or false
+
+        // b) if password is invalid
+        if (!isPasswordValid) { // if the value is false => notFalse(!False) = True, True === True
+            throw new APIError(401, "Invalid User Credentials!")
+        }
+
+// 5) if password is varified ---> Generate access and refresh token
+        const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id) // to access the required user by its unique id.
+// const { accessToken, refreshToken } is called destructure
+
+// 6) send these token in cookies (secure cookies)
+        // what information to send to the user. (picking out unwanted fields like, password and refeshToken)
+        const loggedInUser = await user.findById(user._id).select("-password -refreshToken")
+
+        // sending cookies
+        const options = { // by tagging them true, cookies can only be modified from server and not through frontend 
+            httpOnly : true,
+            secure : true
+        } // sending secure cookies
+
+        // can send cookies as we used cookie-parser
+        return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new APIResponse(
+                200,
+                { /*
+                As we already set tokens in cookies. 
+                then why sending tokens again in data body?
+                Because, here we trying to handle the situation where maybe the user 
+                wants to save his tokens in local storage for safety reason, or trying to access through mobile app (there we are not able to set cookies)
+                */
+                    user : loggedInUser, accessToken, refreshToken // sending tokens are optional
+                },
+                "User logged In Successfully"
+            )
+        )
+
+    })
+
+
+// ----------------------------------------------------------------------------------------------/
+                           // LOG OUT USER //
+// ----------------------------------------------------------------------------------------------/
+const loggedOutUser = asyncHandler(async(req, res))
+
+export{
+    registerUser,
+    loginUser
+} // exporting as an object
 
 // we import this to app.js file
