@@ -7,10 +7,11 @@ That's why routing is necessary so that we handle all the methods swiftly and ea
 */
 
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js"; // Importing as an object as we export it as an object
+import { loggedOutUser, loginUser, registerUser } from "../controllers/user.controller.js"; // Importing as an object as we export it as an object
 
 // To handle files 
 import { upload } from "../middlewares/multer.middleware.js"; 
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 // this handles the files rather then text, coming from the user
 // as its a middleware so it will execute in the middle of process
 
@@ -38,6 +39,11 @@ router.route("/register") --> defined the route/ if this hit
 .post(registerUser) --> What method it will run/ i will call this method
 */
 
+router.route("/login").post(loginUser)
+
+
+// Secured routes
+router.route("/logout").post(verifyJWT, loggedOutUser) // Middleware used here just before loggedout function, just add the middlewares as many as you want by seprating them by comma 
 
 export default router
 // we import this to app.js file

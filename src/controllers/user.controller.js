@@ -325,15 +325,15 @@ The Algorithm we follow to login a user :
         const {username, email, password} = req.body
 
 // 2) give uername or email based access
-        // checking - Atleast username or email exists:
+        // checking - Atleast username or email should exists:
         if (!username || !email) {
             throw new APIError(400, "Atleast one (username or email) is required")
         }
 
-// 3) find the user:
+// 3) If Exist - find the user:
         // a) if we get [any one or both] of the required - Check in database
         const User = await user.findOne({ // Find User
-            $or : [{username} , {email}]
+            $or : [{username} , {email}] //--> MongoDB Operator
         })
 
         // b) if user doesn't exist / didn't find in database
@@ -390,11 +390,64 @@ The Algorithm we follow to login a user :
 // ----------------------------------------------------------------------------------------------/
                            // LOG OUT USER //
 // ----------------------------------------------------------------------------------------------/
-const loggedOutUser = asyncHandler(async(req, res))
+const loggedOutUser = asyncHandler(async(req, res) => {
+/*  
+    The Algorithm we follow to login a user :
+    1) remove user credentials
+    2) remove/reset refresh token
 
+    3) find the user
+    4) (if user exists) check the password
+    5) (if password is varified) Generate access and refresh token
+    6) send these token in cookies (secure cookies)
+    7) response of login success
+*/
+    // Didn't store it as we don't need to refer it later
+    await user.findByIdAndUpdate(
+        // for the specific found user
+        req.USER._id,
+        { // Clearing the refresh token
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        { // show response, once cleared
+            new: true
+        }
+    )
+
+    const options = {
+        httpOnly : true,
+        secure : true
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(
+        new APIResponse(200, {}, "User Logged Out Successfully !!!")
+    )
+
+
+})
+
+
+
+
+
+
+
+
+
+
+// ----------------------------------------------------------------------------------------------/
+                           // EXPORTING THE Functions //
+// ----------------------------------------------------------------------------------------------/
 export{
     registerUser,
-    loginUser
+    loginUser, 
+    loggedOutUser
 } // exporting as an object
 
 // we import this to app.js file

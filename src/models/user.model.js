@@ -42,7 +42,7 @@ const userSchema = new Schema(
             type: String, // it should be encrypted but for matching, we have to store it as string
             required: [true, 'Password is required']
         },
-        refeshToken: {
+        refreshToken: {
             type: String
         }
     },
@@ -148,6 +148,10 @@ userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         {// payload
             _id: this._id,
+            // You can add as many fields as you want, but id is mendatory
+            // ,email: this.email
+            // ,username: this.username
+            // ,fullName: this.fullName
             email: this.email,
             username: this.username,
             fullName: this.fullName
@@ -165,7 +169,7 @@ userSchema.methods.generateAccessToken = function () {
 userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         {// payload
-            _id: this._id
+            _id: this._id      
         },
         process.env.REFRESH_TOKEN_SECRET, //secretOrPrivateKey
         { // object - to store time period
