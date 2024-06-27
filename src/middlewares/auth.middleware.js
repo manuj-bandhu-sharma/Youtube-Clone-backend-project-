@@ -1,7 +1,7 @@
-import { APIError } from "../utils(utilities)/APIError";
-import { asyncHandler } from "../utils(utilities)/asyncHandler";
+import { APIError } from "../utils(utilities)/APIError.js";
+import { asyncHandler } from "../utils(utilities)/asyncHandler.js";
 import jwt from "jsonwebtoken"
-import { user } from "../models/user.model";
+import { user } from "../models/user.model.js";
 
 
 // Verify if User logged In or not //
