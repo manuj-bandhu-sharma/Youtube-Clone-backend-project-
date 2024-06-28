@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils(utilities)/asyncHandler.js"; // for handling web requests
 import { APIError } from "../utils(utilities)/APIError.js"; // used for validation
-import { user } from "../models/user.model.js"; // used to add, delete and check if user exists or not
+import { User } from "../models/user.model.js"; // used to add, delete and check if user exists or not
 import { uploadOnCloudinary } from "../utils(utilities)/couldinary.js"; // used to upload files on clodinary server
 import { APIResponse } from "../utils(utilities)/APIResponse.js"; // used to return structured and crafted response
 import { response } from "express";
@@ -9,15 +9,16 @@ import { response } from "express";
                     // METHODS -> FUNCTIONS that can called MULTIPLE TIMES //
 // ----------------------------------------------------------------------------------------------/
     const generateAccessAndRefreshTokens = async(userId) => {
+        
         try {
-            const User = await user.findById(userId) //If we found the user's properties
-            const accessToken = User.generateAccessToken() // This is a methods thats why we add "()" after funtion name
-            const refreshToken = User.generateRefreshToken() // This is a methods as well
-
-            User.refreshToken = refreshToken // storing the generated token in database for the perticular found user
+            const user = await User.findById(userId) //If we found the user's properties
+            const accessToken = await user.generateAccessToken() // This is a methods thats why we add "()" after funtion name
+            const refreshToken = await user.generateRefreshToken() // This is a methods as well
+ 
+            user.refreshToken = refreshToken // storing the generated token in database for the perticular found user
             
             // Once generated token is updated for the user in db, then we save it in the mongo databse
-            await User.save( 
+            await user.save( {validateBeforeSave : false} )
             /* 
                 Remember,
                     as we try to save, required fields in Mongoose model will kick-in (by default).
@@ -26,8 +27,7 @@ import { response } from "express";
                     That's why we pass a parameter "validationBeforeSave" => false. 
                     Which means, don't put any validation, just go straight and save it.
             */
-                {validationBeforeSave : false}
-            )
+
 
             /*
             Now, as we generated access key and refresh token and saved refresh token in database.
@@ -41,11 +41,12 @@ import { response } from "express";
             if the refresh token is expired or didn't matched, user will be asked for re-login
 
             */
-            return {accessToken, refreshToken}
-
-            User.accessToken = accessToken // storing the generated token in database for the perticular found user
+           return {accessToken, refreshToken}
+           
+           //user.accessToken = accessToken // storing the generated token in database for the perticular found user
 
         } catch (error) {
+            // console.log(error)
             throw new APIError(500, "Something went wrong while generating access and refresh tokens!")        
         }
     }
@@ -110,7 +111,7 @@ const registerUser = asyncHandler(async (req, res) => {
         )
     }
     // 3) check if user already exists
-    const existedUser = await user.findOne({
+    const existedUser = await User.findOne({
         // Here, findOne returns whatever value it finds first, from the database for the defined fields
         // and in last, we holding the reference into a variable (const existedUser) 
         $or: [{ username }, { email }] // it is the query
@@ -229,7 +230,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!avatar) { throw new APIError(400, "Avatar Image is required") }
 
     // 6.1) create user object - create entry in DB
-    const User = await user.create({
+    const user = await User.create({
         fullName,
         email,
         password,
@@ -249,7 +250,7 @@ const registerUser = asyncHandler(async (req, res) => {
     It also add (_id) field to each of the entry by default.
     */
     // 7) Validating created entry while removing password and refresh token field from response
-    const createdUser = await user.findById(User._id).select(
+    const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
     /* 
@@ -319,31 +320,38 @@ The Algorithm we follow to login a user :
     7) response of login success
 */
 
-    const loginUser = asyncHandler(async( req , res ) => {
-
+    const loginUser = asyncHandler(async (req, res) => {
+        // console.log(req.body)
 // 1) get data from request body
-        const {username, email, password} = req.body
+        const {email, username, password} = req.body
+        // console.log(`Email: ${email} and Username: ${username} and Password: ${password}`)
 
 // 2) give uername or email based access
         // checking - Atleast username or email should exists:
-        if (!username || !email) {
+        if (!username && !email) {
             throw new APIError(400, "Atleast one (username or email) is required")
         }
 
+        // alternative :-
+        // if (!(username || email)) {
+        //     throw new APIError(400, "Atleast one (username or email) is required")
+        // }
+
+
 // 3) If Exist - find the user:
         // a) if we get [any one or both] of the required - Check in database
-        const User = await user.findOne({ // Find User
+        const user = await User.findOne({ // Find User
             $or : [{username} , {email}] //--> MongoDB Operator
         })
 
         // b) if user doesn't exist / didn't find in database
-        if (!User) {
+        if (!user) {
             throw new APIError(404, "User does not exist!")
         }
 
 // 4) if user exists ---> check the password
         // a) if user exists in database - ckeck password
-        const isPasswordValid = await User.isPasswordCorrect(password) // Returns true or false
+        const isPasswordValid = await user.isPasswordCorrect(password) // Returns true or false
 
         // b) if password is invalid
         if (!isPasswordValid) { // if the value is false => notFalse(!False) = True, True === True
@@ -352,18 +360,19 @@ The Algorithm we follow to login a user :
 
 // 5) if password is varified ---> Generate access and refresh token
         const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id) // to access the required user by its unique id.
-// const { accessToken, refreshToken } is called destructure
+        // console.log(accessToken, refreshToken)
+        // const { accessToken, refreshToken } is called destructure
 
 // 6) send these token in cookies (secure cookies)
         // what information to send to the user. (picking out unwanted fields like, password and refeshToken)
-        const loggedInUser = await user.findById(user._id).select("-password -refreshToken")
+        const loggedInUser = await User.findById(User._id).select("-password -refreshToken")
 
         // sending cookies
         const options = { // by tagging them true, cookies can only be modified from server and not through frontend 
             httpOnly : true,
             secure : true
         } // sending secure cookies
-
+        console.log("User logged In Successfully")
         // can send cookies as we used cookie-parser
         return res
         .status(200)
@@ -378,12 +387,12 @@ The Algorithm we follow to login a user :
                 Because, here we trying to handle the situation where maybe the user 
                 wants to save his tokens in local storage for safety reason, or trying to access through mobile app (there we are not able to set cookies)
                 */
-                    user : loggedInUser, accessToken, refreshToken // sending tokens are optional
+                    User : loggedInUser, accessToken, refreshToken // sending tokens are optional
                 },
                 "User logged In Successfully"
             )
         )
-
+        
     })
 
 
@@ -403,7 +412,7 @@ const loggedOutUser = asyncHandler(async(req, res) => {
     7) response of login success
 */
     // Didn't store it as we don't need to refer it later
-    await user.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
         // for the specific found user
         req.USER._id,
         { // Clearing the refresh token
@@ -420,6 +429,8 @@ const loggedOutUser = asyncHandler(async(req, res) => {
         httpOnly : true,
         secure : true
     }
+
+    console.log("User logged Out Successfully")
 
     return res
     .status(200)

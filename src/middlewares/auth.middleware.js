@@ -1,7 +1,7 @@
 import { APIError } from "../utils(utilities)/APIError.js";
 import { asyncHandler } from "../utils(utilities)/asyncHandler.js";
 import jwt from "jsonwebtoken"
-import { user } from "../models/user.model.js";
+import { User } from "../models/user.model.js";
 
 
 // Verify if User logged In or not //
@@ -19,7 +19,7 @@ export const verifyJWT = asyncHandler(async(req, _, next) => { // here res chang
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
         // jwt will verify the encoded token once we provide the required secret key. that's why we imported assess token key here to decode the token
     
-        const USER = await user.findById(decodedToken?._id).select("-password -refreshToken")
+        const USER = await User.findById(decodedToken?._id).select("-password -refreshToken")
         // used await cause i want to run a database query
     
         if (!USER) {

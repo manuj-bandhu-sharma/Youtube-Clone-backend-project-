@@ -89,7 +89,7 @@ userSchema.pre its a hook here("save"it is a method, async function (next) {
 as we dont want to run the defined function each and everytime as its un-necessary
 because, when we want to save the password in real?
     1) when i will signup as i will save my password for the first time.
-    2) when we modify our current passowrd.
+    2) when we modify our current password.
 Cause only at that moment we get password field in response 
 that's why when it's necessary, only then it should run.
 
@@ -116,8 +116,8 @@ i.e., we return to the main function after our current middleware execution
 
 // Writing Custom Methods
 // For Authenticating the password
-userSchema.methods.isPasswordCorrect = async function (passowrd) {
-    return await bcrypt.compare(passowrd, this.passowrd)
+userSchema.methods.isPasswordCorrect = async function (password) {
+    return await bcrypt.compare(password, this.password)
 }
 
 /*
@@ -135,8 +135,8 @@ this async function() holds
             it takes time to compute. That's why we use await keyword
             b) bcrypt - class
             c) compare - method : It ask for 2 parameters 
-                i)  passowrd : clear text password used/typed/saved by the user 
-                ii) this.passowrd : Encrypted password from bcrypt for the user's provided password 
+                i)  password : clear text password used/typed/saved by the user 
+                ii) this.password : Encrypted password from bcrypt for the user's provided password 
                 it will compare both the things to varify
                 iii) compare method returns the value as true or false.
  */
@@ -156,9 +156,9 @@ userSchema.methods.generateAccessToken = function () {
             username: this.username,
             fullName: this.fullName
         },
-        process.env.ASSESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIn: process.env.ASSESS_TOKEN_EXPIRY
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
         }
     )
 }
@@ -178,4 +178,4 @@ userSchema.methods.generateRefreshToken = function () {
     )
 }
 
-export const user = mongoose.model("user", userSchema)
+export const User = mongoose.model("user", userSchema)
